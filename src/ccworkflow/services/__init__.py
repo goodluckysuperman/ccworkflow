@@ -1,3 +1,4 @@
+from .generate_draft_service import generate_draft
 from .package_copy_service import copy_package
 from .package_delete_service import delete_package
 from .package_query_service import get_package_detail, list_packages
@@ -9,6 +10,7 @@ __all__ = [
     "copy_package",
     "delete_package",
     "ensure_root_ready",
+    "generate_draft",
     "get_package_detail",
     "list_packages",
     "save_package",

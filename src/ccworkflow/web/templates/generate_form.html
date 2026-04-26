@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>{{ title }}</h1>
+{% if claude_available %}
+  <p>Claude Code 可用：{{ claude_version }}</p>
+{% else %}
+  <p>Claude Code 当前不可用。</p>
+  {% if generate_error %}
+    <p>{{ generate_error }}</p>
+  {% endif %}
+{% endif %}
+
+<form id="generate-form">
+  <label>配置包名称
+    <input id="generate-name" type="text" />
+  </label>
+  <label>简介
+    <input id="generate-summary" type="text" />
+  </label>
+  <label>标签（逗号分隔）
+    <input id="generate-tags" type="text" />
+  </label>
+  <label>目标类型（逗号分隔）
+    <input id="generate-target-types" type="text" value="skill" />
+  </label>
+  <label>需求描述
+    <textarea id="generate-prompt"></textarea>
+  </label>
+  <button type="submit" {% if not claude_available %}disabled{% endif %}>生成草稿</button>
+</form>
+
+<h2>生成结果</h2>
+<pre id="generate-result">尚未生成</pre>
+
+<script>
+  document.getElementById('generate-form').addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const response = await fetch('/api/generate/draft', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: document.getElementById('generate-name').value,
+        summary: document.getElementById('generate-summary').value,
+        tags: document.getElementById('generate-tags').value ? document.getElementById('generate-tags').value.split(',').map(item => item.trim()).filter(Boolean) : [],
+        target_types: document.getElementById('generate-target-types').value ? document.getElementById('generate-target-types').value.split(',').map(item => item.trim()).filter(Boolean) : [],
+        prompt: document.getElementById('generate-prompt').value,
+      }),
+    });
+    const result = await response.json();
+    document.getElementById('generate-result').textContent = JSON.stringify(result, null, 2);
+  });
+</script>
+{% endblock %}
