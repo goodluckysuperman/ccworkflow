@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>{{ package.name }}</h1>
+<p>{{ package.summary }}</p>
+<p>分类：{{ manifest.category }}</p>
+<p>标签：{{ package.tags | join(', ') }}</p>
+<p>对象数量：{{ package.objects | length }}</p>
+<p>脚本数量：{{ package.scripts | length }}</p>
+<a href="/packages/{{ package.package_id }}/edit">编辑</a>
+
+<h2>对象列表</h2>
+{% for obj in package.objects %}
+  <div class="card">
+    <strong>{{ obj.type }}</strong> / {{ obj.name }}
+    <p>{{ obj.description }}</p>
+    <pre>{{ obj.body }}</pre>
+  </div>
+{% endfor %}
+
+<h2>附加脚本</h2>
+{% if package.scripts %}
+  {% for script in package.scripts %}
+    <div class="card">
+      <strong>{{ script.name }}</strong>
+      <p>{{ script.source_path }}</p>
+    </div>
+  {% endfor %}
+{% else %}
+  <p>无附加脚本。</p>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>{{ title }}</h1>
+<form class="toolbar" method="get" action="/packages">
+  <label>关键字
+    <input type="text" name="keyword" value="{{ filters.keyword }}" />
+  </label>
+  <label>类型
+    <select name="type">
+      <option value="all" {% if filters.type == "all" %}selected{% endif %}>全部</option>
+      <option value="skill" {% if filters.type == "skill" %}selected{% endif %}>skill</option>
+      <option value="hook" {% if filters.type == "hook" %}selected{% endif %}>hook</option>
+      <option value="mcp" {% if filters.type == "mcp" %}selected{% endif %}>MCP</option>
+      <option value="mixed" {% if filters.type == "mixed" %}selected{% endif %}>mixed</option>
+    </select>
+  </label>
+  <button type="submit">搜索</button>
+</form>
+
+{% if packages %}
+  {% for item in packages %}
+  <div class="card">
+    <h2>{{ item.name }}</h2>
+    <p>{{ item.summary }}</p>
+    <p>分类：{{ item.category }}</p>
+    <p>标签：{{ item.tags | join(', ') }}</p>
+    <a href="/packages/{{ item.package_id }}">查看详情</a>
+    <a href="/packages/{{ item.package_id }}/edit">编辑</a>
+  </div>
+  {% endfor %}
+{% else %}
+  <p>暂无配置包。</p>
+{% endif %}
+{% endblock %}

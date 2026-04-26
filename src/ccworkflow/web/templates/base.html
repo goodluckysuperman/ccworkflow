@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{{ title }}</title>
+    <style>
+      body { font-family: Arial, sans-serif; margin: 24px; }
+      .toolbar, .card, form { margin-bottom: 16px; }
+      .card { border: 1px solid #ddd; padding: 12px; border-radius: 8px; }
+      a { margin-right: 12px; }
+      input, select, textarea { width: 100%; max-width: 720px; margin-top: 4px; margin-bottom: 12px; }
+      textarea { min-height: 120px; }
+      button { margin-right: 8px; }
+    </style>
+  </head>
+  <body>
+    <nav>
+      <a href="/packages">配置包列表</a>
+      <a href="/packages/new">新建配置包</a>
+    </nav>
+    <hr />
+    {% block content %}{% endblock %}
+  </body>
+</html>

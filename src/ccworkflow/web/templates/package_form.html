@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>{{ title }}</h1>
+<form id="package-form">
+  <label>名称
+    <input id="name" name="name" type="text" value="{{ package.name if package else '' }}" />
+  </label>
+  <label>简介
+    <input id="summary" name="summary" type="text" value="{{ package.summary if package else '' }}" />
+  </label>
+  <label>标签（逗号分隔）
+    <input id="tags" name="tags" type="text" value="{{ package.tags | join(',') if package else '' }}" />
+  </label>
+  <label>对象类型
+    <select id="object-type">
+      <option value="skill">skill</option>
+      <option value="hook">hook</option>
+      <option value="mcp">MCP</option>
+    </select>
+  </label>
+  <label>对象名称
+    <input id="object-name" type="text" value="{{ package.objects[0].name if package and package.objects else '' }}" />
+  </label>
+  <label>对象描述
+    <input id="object-description" type="text" value="{{ package.objects[0].description if package and package.objects else '' }}" />
+  </label>
+  <label>正文
+    <textarea id="object-body">{% if package and package.objects %}{% if package.objects[0].body is string %}{{ package.objects[0].body }}{% else %}{{ package.objects[0].body | tojson(indent=2) }}{% endif %}{% endif %}</textarea>
+  </label>
+  <label>hook_key / server_name
+    <input id="object-extra-key" type="text" value="{% if package and package.objects %}{{ package.objects[0].extra.hook_key if package.objects[0].extra.hook_key is defined else package.objects[0].extra.server_name if package.objects[0].extra.server_name is defined else '' }}{% endif %}" />
+  </label>
+  <label>附加脚本文件路径
+    <input id="script-path" type="text" value="{{ package.scripts[0].source_path if package and package.scripts else '' }}" />
+  </label>
+  <label>附加脚本名称
+    <input id="script-name" type="text" value="{{ package.scripts[0].name if package and package.scripts else '' }}" />
+  </label>
+  <button type="submit">保存</button>
+  <span id="save-result"></span>
+</form>
+
+<script>
+  const mode = {{ '"edit"' if mode == 'edit' else '"create"' }};
+  const packageId = {{ ('"' ~ package.package_id ~ '"') if package else 'null' }};
+  const firstObjectType = {{ ('"' ~ package.objects[0].type ~ '"') if package and package.objects else '"skill"' }};
+  const openBrace = String.fromCharCode(123, 123);
+  const closeBrace = String.fromCharCode(125, 125);
+  const defaultHookCommand = 'python ' + openBrace + 'script:helper.py' + closeBrace;
+  document.getElementById('object-type').value = firstObjectType;
+
+  document.getElementById('package-form').addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const objectType = document.getElementById('object-type').value;
+    const rawBody = document.getElementById('object-body').value;
+    let body = rawBody;
+    let extra = {};
+    const extraKey = document.getElementById('object-extra-key').value.trim();
+
+    if (objectType === 'hook') {
+      body = { event: 'PostToolUse', matcher: 'Write|Edit', hooks: [{ type: 'command', command: rawBody || defaultHookCommand }] };
+      if (extraKey) extra.hook_key = extraKey;
+    }
+    if (objectType === 'mcp') {
+      body = { command: rawBody || 'python', args: [], env: {} };
+      if (extraKey) extra.server_name = extraKey;
+    }
+
+    const payload = {
+      package_id: packageId,
+      name: document.getElementById('name').value,
+      summary: document.getElementById('summary').value,
+      tags: document.getElementById('tags').value ? document.getElementById('tags').value.split(',').map(item => item.trim()).filter(Boolean) : [],
+      objects: [
+        {
+          type: objectType,
+          name: document.getElementById('object-name').value,
+          description: document.getElementById('object-description').value,
+          body,
+          extra,
+        }
+      ],
+      scripts: document.getElementById('script-path').value && document.getElementById('script-name').value ? [
+        {
+          name: document.getElementById('script-name').value,
+          source_path: document.getElementById('script-path').value,
+          applies_to: [],
+        }
+      ] : [],
+    };
+
+    const url = mode === 'edit' ? `/api/packages/${packageId}` : '/api/packages';
+    const method = mode === 'edit' ? 'PUT' : 'POST';
+    const response = await fetch(url, {
+      method,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const result = await response.json();
+    const saveResult = document.getElementById('save-result');
+    if (result.success) {
+      saveResult.textContent = '保存成功';
+      const targetId = result.data.package_id || packageId;
+      window.location.href = `/packages/${targetId}`;
+      return;
+    }
+    saveResult.textContent = result.message || (result.errors && result.errors.length ? result.errors[0].detail : '保存失败');
+  });
+</script>
+{% endblock %}
