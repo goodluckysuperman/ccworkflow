@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>{{ title }}</h1>
+<form id="settings-form">
+  <label>收藏根目录
+    <input id="collection-root" type="text" value="{{ settings.collection_root }}" disabled />
+  </label>
+  <label>最近使用的生成方式
+    <input id="last-generate-mode" type="text" value="{{ settings.last_generate_mode }}" />
+  </label>
+  <label>最近使用的安装范围
+    <input id="last-install-scope" type="text" value="{{ settings.last_install_scope }}" />
+  </label>
+  <button type="submit">保存普通设置</button>
+</form>
+
+<form id="migrate-form">
+  <label>新收藏根目录
+    <input id="new-root" type="text" />
+  </label>
+  <button type="submit">迁移收藏根目录</button>
+</form>
+
+<pre id="settings-result"></pre>
+
+<script>
+  document.getElementById('settings-form').addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const response = await fetch('/api/settings', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        last_generate_mode: document.getElementById('last-generate-mode').value,
+        last_install_scope: document.getElementById('last-install-scope').value,
+      }),
+    });
+    const result = await response.json();
+    document.getElementById('settings-result').textContent = JSON.stringify(result, null, 2);
+  });
+
+  document.getElementById('migrate-form').addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const response = await fetch('/api/settings/migrate-root', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ new_root: document.getElementById('new-root').value }),
+    });
+    const result = await response.json();
+    document.getElementById('settings-result').textContent = JSON.stringify(result, null, 2);
+  });
+</script>
+{% endblock %}

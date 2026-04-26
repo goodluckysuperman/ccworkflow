@@ -3,6 +3,8 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 
 from ccworkflow.integrations.claude_cli_adapter import check_available
 from ccworkflow.services.package_query_service import get_package_detail, list_packages
+from ccworkflow.services.record_query_service import list_install_records
+from ccworkflow.services.settings_query_service import get_settings
 
 router = APIRouter()
 
@@ -64,6 +66,34 @@ def generate_page(request: Request) -> HTMLResponse:
             "claude_available": availability.get("data", {}).get("available", False) if availability.get("success") else False,
             "claude_version": availability.get("data", {}).get("version", "") if availability.get("success") else "",
             "generate_error": availability["errors"][0]["detail"] if availability.get("errors") else "",
+        },
+    )
+
+
+@router.get("/install-records", response_class=HTMLResponse)
+def install_records_page(request: Request) -> HTMLResponse:
+    templates = request.app.state.templates
+    records_result = list_install_records({})
+    return templates.TemplateResponse(
+        request=request,
+        name="install_records.html",
+        context={
+            "title": "安装记录",
+            "records": records_result["data"]["items"],
+        },
+    )
+
+
+@router.get("/settings", response_class=HTMLResponse)
+def settings_page(request: Request) -> HTMLResponse:
+    templates = request.app.state.templates
+    settings_result = get_settings({})
+    return templates.TemplateResponse(
+        request=request,
+        name="settings.html",
+        context={
+            "title": "设置",
+            "settings": settings_result["data"],
         },
     )
 

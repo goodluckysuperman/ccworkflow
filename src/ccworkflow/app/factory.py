@@ -7,6 +7,8 @@ from ccworkflow.web.routes.generate_routes import router as generate_router
 from ccworkflow.web.routes.install_routes import router as install_router
 from ccworkflow.web.routes.package_routes import router as package_router
 from ccworkflow.web.routes.page_routes import router as page_router
+from ccworkflow.web.routes.record_routes import router as record_router
+from ccworkflow.web.routes.settings_routes import router as settings_router
 
 
 def create_app() -> FastAPI:
@@ -17,4 +19,6 @@ def create_app() -> FastAPI:
     app.include_router(package_router)
     app.include_router(generate_router)
     app.include_router(install_router)
+    app.include_router(record_router)
+    app.include_router(settings_router)
     return app

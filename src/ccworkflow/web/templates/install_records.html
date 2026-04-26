@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>{{ title }}</h1>
+{% if records %}
+  {% for item in records %}
+    <div class="card">
+      <h2>{{ item.package_id }}</h2>
+      <p>记录 ID：{{ item.install_record_id }}</p>
+      <p>范围：{{ item.scope }}</p>
+      <p>安装状态：{{ item.install_status }}</p>
+      <p>卸载状态：{{ item.uninstall_status }}</p>
+    </div>
+  {% endfor %}
+{% else %}
+  <p>暂无安装记录。</p>
+{% endif %}
+{% endblock %}
