@@ -52,3 +52,4 @@ def test_install_record_pages_and_api(tmp_path) -> None:
     page_response = client.get("/install-records")
     assert page_response.status_code == 200
     assert "安装记录" in page_response.text
+    assert "卸载" in page_response.text

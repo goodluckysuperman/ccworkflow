@@ -47,6 +47,8 @@ def test_package_pages_render_detail_and_edit(tmp_path) -> None:
     assert detail_response.status_code == 200
     assert "page package" in detail_response.text
     assert "page-skill" in detail_response.text
+    assert "预览安装" in detail_response.text
+    assert "执行安装" in detail_response.text
 
     edit_response = client.get(f"/packages/{package_id}/edit")
     assert edit_response.status_code == 200

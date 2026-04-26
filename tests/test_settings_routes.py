@@ -57,10 +57,10 @@ def test_migrate_root_moves_collection_data(tmp_path) -> None:
     )
     assert create_response.json()["success"] is True
 
-    current_root = get_collection_root()
     new_root = tmp_path / "migrated-root"
     response = client.post("/api/settings/migrate-root", json={"new_root": str(new_root)})
     assert response.status_code == 200
     assert response.json()["success"] is True
     assert (new_root / "skills").exists()
     assert any((new_root / "skills").iterdir())
+    assert get_collection_root().resolve() == new_root.resolve()

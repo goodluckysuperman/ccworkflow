@@ -19,5 +19,6 @@ def collection_root_fixture(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     root = tmp_path / "collection"
     ensure_root_ready({"default_root": str(root)})
     monkeypatch.setattr(runtime, "DEFAULT_COLLECTION_ROOT", root)
+    monkeypatch.setattr(runtime, "ACTIVE_COLLECTION_ROOT", root)
     yield root
     shutil.rmtree(root, ignore_errors=True)

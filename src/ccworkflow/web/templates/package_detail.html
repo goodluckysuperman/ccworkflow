@@ -8,6 +8,22 @@
 <p>脚本数量：{{ package.scripts | length }}</p>
 <a href="/packages/{{ package.package_id }}/edit">编辑</a>
 
+<form id="install-form" class="card">
+  <h2>安装操作</h2>
+  <label>安装范围
+    <select id="install-scope">
+      <option value="project">项目级</option>
+      <option value="global">全局</option>
+    </select>
+  </label>
+  <label>项目根目录
+    <input id="project-root" type="text" />
+  </label>
+  <button type="button" id="preview-install">预览安装</button>
+  <button type="button" id="execute-install">执行安装</button>
+  <pre id="install-result"></pre>
+</form>
+
 <h2>对象列表</h2>
 {% for obj in package.objects %}
   <div class="card">
@@ -28,4 +44,30 @@
 {% else %}
   <p>无附加脚本。</p>
 {% endif %}
+
+<script>
+  async function callInstallApi(path) {
+    const payload = {
+      package_id: "{{ package.package_id }}",
+      scope: document.getElementById('install-scope').value,
+      project_root: document.getElementById('project-root').value || null,
+      resolutions: [],
+    };
+    const response = await fetch(path, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const result = await response.json();
+    document.getElementById('install-result').textContent = JSON.stringify(result, null, 2);
+  }
+
+  document.getElementById('preview-install').addEventListener('click', async () => {
+    await callInstallApi('/api/install/preview');
+  });
+
+  document.getElementById('execute-install').addEventListener('click', async () => {
+    await callInstallApi('/api/install/execute');
+  });
+</script>
 {% endblock %}

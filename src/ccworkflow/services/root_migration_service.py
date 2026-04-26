@@ -1,7 +1,7 @@
 import shutil
 from pathlib import Path
 
-from ccworkflow.app.runtime import DEFAULT_COLLECTION_ROOT, get_collection_root, get_settings_path
+from ccworkflow.app.runtime import DEFAULT_COLLECTION_ROOT, get_collection_root, set_active_collection_root
 from ccworkflow.domain.common_schema import AppResult
 from ccworkflow.infra.path_policy import validate_collection_root
 from ccworkflow.repositories.settings_repository import load_settings, save_settings
@@ -36,5 +36,6 @@ def migrate_root(input_data: dict) -> dict:
     active_settings = load_settings({"settings_path": str(new_root / "system" / "settings.json")})["data"]["settings"]
     active_settings["collection_root"] = new_root.as_posix()
     save_settings({"settings_path": str(new_root / "system" / "settings.json"), "settings": active_settings})
+    set_active_collection_root(new_root)
 
     return AppResult(success=True, data={"old_root": current_root.as_posix(), "new_root": new_root.as_posix(), "migrated": True}).model_dump()

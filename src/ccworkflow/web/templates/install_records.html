@@ -9,9 +9,18 @@
       <p>范围：{{ item.scope }}</p>
       <p>安装状态：{{ item.install_status }}</p>
       <p>卸载状态：{{ item.uninstall_status }}</p>
+      <button type="button" onclick="uninstallRecord('{{ item.install_record_id }}')">卸载</button>
     </div>
   {% endfor %}
 {% else %}
   <p>暂无安装记录。</p>
 {% endif %}
+<pre id="uninstall-result"></pre>
+<script>
+  async function uninstallRecord(recordId) {
+    const response = await fetch(`/api/install/uninstall/${recordId}`, { method: 'POST' });
+    const result = await response.json();
+    document.getElementById('uninstall-result').textContent = JSON.stringify(result, null, 2);
+  }
+</script>
 {% endblock %}
