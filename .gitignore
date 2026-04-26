@@ -8,3 +8,6 @@ wheels/
 
 # Virtual environments
 .venv
+
+# Claude local state
+.claude/scheduled_tasks.lock
