@@ -1,11 +1,11 @@
 import socket
 import threading
 import webbrowser
-from pathlib import Path
 
 import uvicorn
 
 from ccworkflow.app.factory import create_app
+from ccworkflow.app.runtime import DEFAULT_COLLECTION_ROOT
 from ccworkflow.infra.time_gateway import now_iso
 from ccworkflow.services.root_init_service import ensure_root_ready
 
@@ -17,7 +17,7 @@ def _pick_port() -> int:
 
 
 def start_app(host: str = "127.0.0.1", port: int | None = None, open_browser: bool = True) -> dict:
-    root_result = ensure_root_ready({"default_root": "D:/Programming_tools/.ccworkflow"})
+    root_result = ensure_root_ready({"default_root": str(DEFAULT_COLLECTION_ROOT)})
     actual_port = port or _pick_port()
     url = f"http://{host}:{actual_port}/"
 
