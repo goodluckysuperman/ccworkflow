@@ -27,12 +27,15 @@
     <textarea id="generate-prompt"></textarea>
   </label>
   <button type="submit" {% if not claude_available %}disabled{% endif %}>生成草稿</button>
+  <button type="button" id="edit-draft" disabled>继续编辑</button>
 </form>
 
 <h2>生成结果</h2>
 <pre id="generate-result">尚未生成</pre>
 
 <script>
+  let latestDraft = null;
+
   document.getElementById('generate-form').addEventListener('submit', async (event) => {
     event.preventDefault();
     const response = await fetch('/api/generate/draft', {
@@ -48,6 +51,16 @@
     });
     const result = await response.json();
     document.getElementById('generate-result').textContent = JSON.stringify(result, null, 2);
+    if (result.success) {
+      latestDraft = result.data.draft;
+      document.getElementById('edit-draft').disabled = false;
+    }
+  });
+
+  document.getElementById('edit-draft').addEventListener('click', () => {
+    if (!latestDraft) return;
+    sessionStorage.setItem('ccworkflow_generate_draft', JSON.stringify(latestDraft));
+    window.location.href = '/packages/new?from_draft=1';
   });
 </script>
 {% endblock %}

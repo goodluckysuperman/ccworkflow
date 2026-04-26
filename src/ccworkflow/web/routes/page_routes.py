@@ -25,8 +25,9 @@ def home(request: Request) -> HTMLResponse:
 
 
 @router.get("/packages", response_class=HTMLResponse)
-def packages_page(request: Request, keyword: str = "", type: str = "all") -> HTMLResponse:
-    packages_result = list_packages({"keyword": keyword, "tags": [], "type": type})
+def packages_page(request: Request, keyword: str = "", type: str = "all", tags: str = "") -> HTMLResponse:
+    tag_list = [item.strip() for item in tags.split(",") if item.strip()]
+    packages_result = list_packages({"keyword": keyword, "tags": tag_list, "type": type})
     templates = request.app.state.templates
     return templates.TemplateResponse(
         request=request,
@@ -34,13 +35,16 @@ def packages_page(request: Request, keyword: str = "", type: str = "all") -> HTM
         context={
             "title": "配置包列表",
             "packages": packages_result["data"]["items"],
-            "filters": packages_result["data"]["filters"],
+            "filters": {
+                **packages_result["data"]["filters"],
+                "tags_text": tags,
+            },
         },
     )
 
 
 @router.get("/packages/new", response_class=HTMLResponse)
-def package_new_page(request: Request) -> HTMLResponse:
+def package_new_page(request: Request, from_draft: int = 0) -> HTMLResponse:
     templates = request.app.state.templates
     return templates.TemplateResponse(
         request=request,
@@ -50,6 +54,7 @@ def package_new_page(request: Request) -> HTMLResponse:
             "mode": "create",
             "package": None,
             "manifest": None,
+            "from_draft": bool(from_draft),
         },
     )
 
@@ -131,5 +136,6 @@ def package_edit_page(request: Request, package_id: str) -> HTMLResponse:
             "mode": "edit",
             "package": detail_result["data"]["package"],
             "manifest": detail_result["data"]["manifest"],
+            "from_draft": False,
         },
     )

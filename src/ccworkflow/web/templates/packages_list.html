@@ -5,6 +5,9 @@
   <label>关键字
     <input type="text" name="keyword" value="{{ filters.keyword }}" />
   </label>
+  <label>标签（逗号分隔）
+    <input type="text" name="tags" value="{{ filters.tags_text if filters.tags_text is defined else '' }}" />
+  </label>
   <label>类型
     <select name="type">
       <option value="all" {% if filters.type == "all" %}selected{% endif %}>全部</option>

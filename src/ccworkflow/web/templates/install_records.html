@@ -9,18 +9,25 @@
       <p>范围：{{ item.scope }}</p>
       <p>安装状态：{{ item.install_status }}</p>
       <p>卸载状态：{{ item.uninstall_status }}</p>
+      <button type="button" onclick="showRecordDetail('{{ item.install_record_id }}')">查看详情</button>
       <button type="button" onclick="uninstallRecord('{{ item.install_record_id }}')">卸载</button>
     </div>
   {% endfor %}
 {% else %}
   <p>暂无安装记录。</p>
 {% endif %}
-<pre id="uninstall-result"></pre>
+<pre id="record-result"></pre>
 <script>
+  async function showRecordDetail(recordId) {
+    const response = await fetch(`/api/install-records/${recordId}`);
+    const result = await response.json();
+    document.getElementById('record-result').textContent = JSON.stringify(result, null, 2);
+  }
+
   async function uninstallRecord(recordId) {
     const response = await fetch(`/api/install/uninstall/${recordId}`, { method: 'POST' });
     const result = await response.json();
-    document.getElementById('uninstall-result').textContent = JSON.stringify(result, null, 2);
+    document.getElementById('record-result').textContent = JSON.stringify(result, null, 2);
   }
 </script>
 {% endblock %}

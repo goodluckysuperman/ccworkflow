@@ -22,7 +22,7 @@ def test_package_pages_render_detail_and_edit(tmp_path) -> None:
         json={
             "name": "page package",
             "summary": "page summary",
-            "tags": ["ui"],
+            "tags": ["ui", "test"],
             "objects": [
                 {
                     "type": "skill",
@@ -30,6 +30,13 @@ def test_package_pages_render_detail_and_edit(tmp_path) -> None:
                     "description": "page skill",
                     "body": "# Skill\n{{script:helper.py}}",
                     "extra": {},
+                },
+                {
+                    "type": "mcp",
+                    "name": "page-mcp",
+                    "description": "page mcp",
+                    "body": {"command": "python", "args": [], "env": {}},
+                    "extra": {"server_name": "page-mcp"},
                 }
             ],
             "scripts": [
@@ -47,6 +54,7 @@ def test_package_pages_render_detail_and_edit(tmp_path) -> None:
     assert detail_response.status_code == 200
     assert "page package" in detail_response.text
     assert "page-skill" in detail_response.text
+    assert "page-mcp" in detail_response.text
     assert "预览安装" in detail_response.text
     assert "执行安装" in detail_response.text
 
@@ -54,3 +62,8 @@ def test_package_pages_render_detail_and_edit(tmp_path) -> None:
     assert edit_response.status_code == 200
     assert "编辑配置包" in edit_response.text
     assert "page package" in edit_response.text
+    assert "新增对象" in edit_response.text
+
+    list_response = client.get("/packages", params={"tags": "ui,test"})
+    assert list_response.status_code == 200
+    assert "标签（逗号分隔）" in list_response.text

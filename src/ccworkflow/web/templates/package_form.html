@@ -11,82 +11,153 @@
   <label>标签（逗号分隔）
     <input id="tags" name="tags" type="text" value="{{ package.tags | join(',') if package else '' }}" />
   </label>
-  <label>对象类型
-    <select id="object-type">
-      <option value="skill">skill</option>
-      <option value="hook">hook</option>
-      <option value="mcp">MCP</option>
-    </select>
-  </label>
-  <label>对象名称
-    <input id="object-name" type="text" value="{{ package.objects[0].name if package and package.objects else '' }}" />
-  </label>
-  <label>对象描述
-    <input id="object-description" type="text" value="{{ package.objects[0].description if package and package.objects else '' }}" />
-  </label>
-  <label>正文
-    <textarea id="object-body">{% if package and package.objects %}{% if package.objects[0].body is string %}{{ package.objects[0].body }}{% else %}{{ package.objects[0].body | tojson(indent=2) }}{% endif %}{% endif %}</textarea>
-  </label>
-  <label>hook_key / server_name
-    <input id="object-extra-key" type="text" value="{% if package and package.objects %}{{ package.objects[0].extra.hook_key if package.objects[0].extra.hook_key is defined else package.objects[0].extra.server_name if package.objects[0].extra.server_name is defined else '' }}{% endif %}" />
-  </label>
-  <label>附加脚本文件路径
-    <input id="script-path" type="text" value="{{ package.scripts[0].source_path if package and package.scripts else '' }}" />
-  </label>
-  <label>附加脚本名称
-    <input id="script-name" type="text" value="{{ package.scripts[0].name if package and package.scripts else '' }}" />
-  </label>
-  <button type="submit">保存</button>
-  <span id="save-result"></span>
+
+  <h2>对象列表</h2>
+  <div id="objects-container"></div>
+  <button type="button" id="add-object">新增对象</button>
+
+  <h2>附加脚本</h2>
+  <div id="scripts-container"></div>
+  <button type="button" id="add-script">新增脚本</button>
+
+  <div style="margin-top: 16px;">
+    <button type="submit">保存</button>
+    <span id="save-result"></span>
+  </div>
 </form>
 
 <script>
   const mode = {{ '"edit"' if mode == 'edit' else '"create"' }};
   const packageId = {{ ('"' ~ package.package_id ~ '"') if package else 'null' }};
-  const firstObjectType = {{ ('"' ~ package.objects[0].type ~ '"') if package and package.objects else '"skill"' }};
+  const initialPackage = {{ package | tojson if package else 'null' }};
   const openBrace = String.fromCharCode(123, 123);
   const closeBrace = String.fromCharCode(125, 125);
   const defaultHookCommand = 'python ' + openBrace + 'script:helper.py' + closeBrace;
-  document.getElementById('object-type').value = firstObjectType;
+
+  const objectsContainer = document.getElementById('objects-container');
+  const scriptsContainer = document.getElementById('scripts-container');
+
+  function createObjectCard(data = {}) {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'card object-card';
+    const bodyValue = typeof data.body === 'string' ? data.body : JSON.stringify(data.body || '', null, 2);
+    const hookKey = data.extra && data.extra.hook_key ? data.extra.hook_key : '';
+    const serverName = data.extra && data.extra.server_name ? data.extra.server_name : '';
+    wrapper.innerHTML = `
+      <label>对象类型
+        <select class="object-type">
+          <option value="skill">skill</option>
+          <option value="hook">hook</option>
+          <option value="mcp">MCP</option>
+        </select>
+      </label>
+      <label>对象名称
+        <input class="object-name" type="text" value="${data.name || ''}" />
+      </label>
+      <label>对象描述
+        <input class="object-description" type="text" value="${data.description || ''}" />
+      </label>
+      <label>正文
+        <textarea class="object-body">${bodyValue || ''}</textarea>
+      </label>
+      <label>hook_key
+        <input class="object-hook-key" type="text" value="${hookKey}" />
+      </label>
+      <label>server_name
+        <input class="object-server-name" type="text" value="${serverName}" />
+      </label>
+      <button type="button" class="remove-object">删除对象</button>
+    `;
+    wrapper.querySelector('.object-type').value = data.type || 'skill';
+    wrapper.querySelector('.remove-object').addEventListener('click', () => wrapper.remove());
+    return wrapper;
+  }
+
+  function createScriptCard(data = {}) {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'card script-card';
+    wrapper.innerHTML = `
+      <label>脚本名称
+        <input class="script-name" type="text" value="${data.name || ''}" />
+      </label>
+      <label>脚本文件路径
+        <input class="script-path" type="text" value="${data.source_path || ''}" />
+      </label>
+      <button type="button" class="remove-script">删除脚本</button>
+    `;
+    wrapper.querySelector('.remove-script').addEventListener('click', () => wrapper.remove());
+    return wrapper;
+  }
+
+  function loadInitialData() {
+    if (initialPackage && initialPackage.objects && initialPackage.objects.length) {
+      initialPackage.objects.forEach(obj => objectsContainer.appendChild(createObjectCard(obj)));
+    } else {
+      objectsContainer.appendChild(createObjectCard());
+    }
+
+    if (initialPackage && initialPackage.scripts && initialPackage.scripts.length) {
+      initialPackage.scripts.forEach(script => scriptsContainer.appendChild(createScriptCard(script)));
+    }
+  }
+
+  function collectObjects() {
+    return Array.from(document.querySelectorAll('.object-card')).map(card => {
+      const type = card.querySelector('.object-type').value;
+      const rawBody = card.querySelector('.object-body').value;
+      let body = rawBody;
+      const extra = {};
+      const hookKey = card.querySelector('.object-hook-key').value.trim();
+      const serverName = card.querySelector('.object-server-name').value.trim();
+
+      if (type === 'hook') {
+        body = { event: 'PostToolUse', matcher: 'Write|Edit', hooks: [{ type: 'command', command: rawBody || defaultHookCommand }] };
+        if (hookKey) extra.hook_key = hookKey;
+      }
+      if (type === 'mcp') {
+        try {
+          body = JSON.parse(rawBody || '{"command":"python","args":[],"env":{}}');
+        } catch {
+          body = { command: rawBody || 'python', args: [], env: {} };
+        }
+        if (serverName) extra.server_name = serverName;
+      }
+
+      return {
+        type,
+        name: card.querySelector('.object-name').value,
+        description: card.querySelector('.object-description').value,
+        body,
+        extra,
+      };
+    });
+  }
+
+  function collectScripts() {
+    return Array.from(document.querySelectorAll('.script-card')).map(card => ({
+      name: card.querySelector('.script-name').value,
+      source_path: card.querySelector('.script-path').value,
+      applies_to: [],
+    })).filter(item => item.name && item.source_path);
+  }
+
+  document.getElementById('add-object').addEventListener('click', () => {
+    objectsContainer.appendChild(createObjectCard());
+  });
+
+  document.getElementById('add-script').addEventListener('click', () => {
+    scriptsContainer.appendChild(createScriptCard());
+  });
 
   document.getElementById('package-form').addEventListener('submit', async (event) => {
     event.preventDefault();
-    const objectType = document.getElementById('object-type').value;
-    const rawBody = document.getElementById('object-body').value;
-    let body = rawBody;
-    let extra = {};
-    const extraKey = document.getElementById('object-extra-key').value.trim();
-
-    if (objectType === 'hook') {
-      body = { event: 'PostToolUse', matcher: 'Write|Edit', hooks: [{ type: 'command', command: rawBody || defaultHookCommand }] };
-      if (extraKey) extra.hook_key = extraKey;
-    }
-    if (objectType === 'mcp') {
-      body = { command: rawBody || 'python', args: [], env: {} };
-      if (extraKey) extra.server_name = extraKey;
-    }
-
     const payload = {
       package_id: packageId,
       name: document.getElementById('name').value,
       summary: document.getElementById('summary').value,
       tags: document.getElementById('tags').value ? document.getElementById('tags').value.split(',').map(item => item.trim()).filter(Boolean) : [],
-      objects: [
-        {
-          type: objectType,
-          name: document.getElementById('object-name').value,
-          description: document.getElementById('object-description').value,
-          body,
-          extra,
-        }
-      ],
-      scripts: document.getElementById('script-path').value && document.getElementById('script-name').value ? [
-        {
-          name: document.getElementById('script-name').value,
-          source_path: document.getElementById('script-path').value,
-          applies_to: [],
-        }
-      ] : [],
+      objects: collectObjects(),
+      scripts: collectScripts(),
     };
 
     const url = mode === 'edit' ? `/api/packages/${packageId}` : '/api/packages';
@@ -106,5 +177,7 @@
     }
     saveResult.textContent = result.message || (result.errors && result.errors.length ? result.errors[0].detail : '保存失败');
   });
+
+  loadInitialData();
 </script>
 {% endblock %}

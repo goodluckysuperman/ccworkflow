@@ -53,3 +53,4 @@ def test_install_record_pages_and_api(tmp_path) -> None:
     assert page_response.status_code == 200
     assert "安装记录" in page_response.text
     assert "卸载" in page_response.text
+    assert "查看详情" in page_response.text
