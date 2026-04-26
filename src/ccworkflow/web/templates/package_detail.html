@@ -21,6 +21,7 @@
   </label>
   <button type="button" id="preview-install">预览安装</button>
   <button type="button" id="execute-install">执行安装</button>
+  <div id="conflict-actions"></div>
   <pre id="install-result"></pre>
 </form>
 
@@ -46,12 +47,47 @@
 {% endif %}
 
 <script>
-  async function callInstallApi(path) {
+  let lastPreviewResult = null;
+
+  function collectResolutions() {
+    return Array.from(document.querySelectorAll('.conflict-resolution')).map(select => ({
+      object_id: select.dataset.objectId,
+      action: select.value,
+    }));
+  }
+
+  function renderConflicts(conflicts) {
+    const container = document.getElementById('conflict-actions');
+    container.innerHTML = '';
+    if (!conflicts || !conflicts.length) {
+      container.textContent = '无冲突。';
+      return;
+    }
+
+    conflicts.forEach(conflict => {
+      const wrapper = document.createElement('div');
+      wrapper.className = 'card';
+      wrapper.innerHTML = `
+        <p>冲突对象：${conflict.object_name}</p>
+        <p>冲突原因：${conflict.reason}</p>
+        <label>处理策略
+          <select class="conflict-resolution" data-object-id="${conflict.object_id}">
+            <option value="replace">替换</option>
+            <option value="skip">跳过</option>
+            <option value="cancel">取消安装</option>
+          </select>
+        </label>
+      `;
+      container.appendChild(wrapper);
+    });
+  }
+
+  async function callInstallApi(path, includeResolutions) {
     const payload = {
       package_id: "{{ package.package_id }}",
       scope: document.getElementById('install-scope').value,
       project_root: document.getElementById('project-root').value || null,
-      resolutions: [],
+      resolutions: includeResolutions ? collectResolutions() : [],
     };
     const response = await fetch(path, {
       method: 'POST',
@@ -60,14 +96,23 @@
     });
     const result = await response.json();
     document.getElementById('install-result').textContent = JSON.stringify(result, null, 2);
+    return result;
   }
 
   document.getElementById('preview-install').addEventListener('click', async () => {
-    await callInstallApi('/api/install/preview');
+    const result = await callInstallApi('/api/install/preview', false);
+    lastPreviewResult = result;
+    renderConflicts(result.success ? result.data.conflicts : []);
   });
 
   document.getElementById('execute-install').addEventListener('click', async () => {
-    await callInstallApi('/api/install/execute');
+    if (!lastPreviewResult) {
+      const preview = await callInstallApi('/api/install/preview', false);
+      lastPreviewResult = preview;
+      renderConflicts(preview.success ? preview.data.conflicts : []);
+      if (!preview.success) return;
+    }
+    await callInstallApi('/api/install/execute', true);
   });
 </script>
 {% endblock %}

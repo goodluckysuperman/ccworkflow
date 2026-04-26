@@ -25,8 +25,16 @@ def execute_install(input_data: dict) -> dict:
     if not preview["success"]:
         return preview
 
-    copied_scripts = _copy_scripts(preview["data"]["copied_scripts"])
     resolutions = {item["object_id"]: item["action"] for item in input_data.get("resolutions", [])}
+    conflicts = preview["data"]["conflicts"]
+    for conflict in conflicts:
+        if conflict["object_id"] not in resolutions:
+            return AppResult(success=False, message="存在冲突但未提供处理策略", data={"conflicts": conflicts}).model_dump()
+
+    if any(action == "cancel" for action in resolutions.values()):
+        return AppResult(success=False, message="安装已取消", data={"failed_objects": []}).model_dump()
+
+    copied_scripts = _copy_scripts(preview["data"]["copied_scripts"])
     objects = preview["data"]["resolved_objects"]
     targets = {item["object_id"]: item for item in preview["data"]["targets"]}
 
@@ -42,8 +50,6 @@ def execute_install(input_data: dict) -> dict:
         result = _install_single_object(obj, target, resolution)
         if not result["success"]:
             failed_objects.append(obj["object_id"])
-            if resolution == "cancel":
-                return AppResult(success=False, message="安装已取消", data={"failed_objects": failed_objects}).model_dump()
             continue
 
         data = result["data"]

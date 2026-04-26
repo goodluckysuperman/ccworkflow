@@ -15,50 +15,47 @@ def uninstall_by_record(input_data: dict) -> dict:
         return AppResult(success=False, message="安装记录不存在").model_dump()
 
     record = load_record({"record_path": str(record_path)})["data"]["record"]
+    planned = _plan_uninstall(record)
+    if planned["blocked_objects"]:
+        updated = mark_uninstall_result({"record_path": str(record_path), "uninstall_status": "uninstall_failed"})
+        return AppResult(
+            success=False,
+            message="存在已被手工修改或无法安全识别的内容，已阻止卸载",
+            data={
+                "install_record_id": record_id,
+                "removed_objects": [],
+                "removed_scripts": [],
+                "blocked_objects": planned["blocked_objects"],
+                "record": updated["data"]["record"],
+            },
+        ).model_dump()
+
     removed_objects: list[str] = []
     removed_scripts: list[str] = []
-    blocked_objects: list[str] = []
 
-    for entry in record.get("entries", []):
-        target_file = Path(entry["target_file"])
-        if not target_file.exists():
-            removed_objects.append(entry["object_id"])
-            continue
-
-        if entry["type"] == "skill":
-            current_content = target_file.read_text(encoding="utf-8")
-            if current_content != entry.get("snapshot"):
-                blocked_objects.append(entry["object_id"])
-                continue
-            delete_path(target_file)
-            removed_objects.append(entry["object_id"])
+    for action in planned["actions"]:
+        target_file = Path(action["target_file"])
+        if action["kind"] == "skill":
+            if target_file.exists():
+                delete_path(target_file)
+            removed_objects.append(action["object_id"])
             continue
 
         payload = read_json(target_file)
-        if entry["type"] == "hook":
+        if action["kind"] == "hook":
             generated = payload.get("generatedHooks", {})
-            snapshot = entry.get("snapshot", {})
-            key = next(iter(snapshot.keys()), None)
-            if key is None or generated.get(key) != snapshot.get(key):
-                blocked_objects.append(entry["object_id"])
-                continue
-            generated.pop(key, None)
+            generated.pop(action["key"], None)
             payload["generatedHooks"] = generated
             write_json(target_file, payload)
-            removed_objects.append(entry["object_id"])
+            removed_objects.append(action["object_id"])
             continue
 
-        if entry["type"] == "mcp":
+        if action["kind"] == "mcp":
             mcp_servers = payload.get("mcpServers", {})
-            snapshot = entry.get("snapshot", {})
-            key = next(iter(snapshot.keys()), None)
-            if key is None or mcp_servers.get(key) != snapshot.get(key):
-                blocked_objects.append(entry["object_id"])
-                continue
-            mcp_servers.pop(key, None)
+            mcp_servers.pop(action["key"], None)
             payload["mcpServers"] = mcp_servers
             write_json(target_file, payload)
-            removed_objects.append(entry["object_id"])
+            removed_objects.append(action["object_id"])
 
     for script_path in record.get("copied_scripts", []):
         target = Path(script_path)
@@ -66,15 +63,57 @@ def uninstall_by_record(input_data: dict) -> dict:
             delete_path(target)
             removed_scripts.append(target.as_posix())
 
-    uninstall_status = "uninstall_failed" if blocked_objects else "uninstall_success"
-    updated = mark_uninstall_result({"record_path": str(record_path), "uninstall_status": uninstall_status})
+    updated = mark_uninstall_result({"record_path": str(record_path), "uninstall_status": "uninstall_success"})
     return AppResult(
-        success=not blocked_objects,
+        success=True,
         data={
             "install_record_id": record_id,
             "removed_objects": removed_objects,
             "removed_scripts": removed_scripts,
-            "blocked_objects": blocked_objects,
+            "blocked_objects": [],
             "record": updated["data"]["record"],
         },
     ).model_dump()
+
+
+def _plan_uninstall(record: dict) -> dict:
+    actions: list[dict] = []
+    blocked_objects: list[str] = []
+
+    for entry in record.get("entries", []):
+        target_file = Path(entry["target_file"])
+        if not target_file.exists():
+            actions.append({"object_id": entry["object_id"], "kind": entry["type"], "target_file": entry["target_file"], "key": None})
+            continue
+
+        if entry["type"] == "skill":
+            current_content = target_file.read_text(encoding="utf-8")
+            if current_content != entry.get("snapshot"):
+                blocked_objects.append(entry["object_id"])
+                continue
+            actions.append({"object_id": entry["object_id"], "kind": "skill", "target_file": entry["target_file"], "key": None})
+            continue
+
+        payload = read_json(target_file)
+        snapshot = entry.get("snapshot", {})
+        key = next(iter(snapshot.keys()), None)
+        if key is None:
+            blocked_objects.append(entry["object_id"])
+            continue
+
+        if entry["type"] == "hook":
+            generated = payload.get("generatedHooks", {})
+            if generated.get(key) != snapshot.get(key):
+                blocked_objects.append(entry["object_id"])
+                continue
+            actions.append({"object_id": entry["object_id"], "kind": "hook", "target_file": entry["target_file"], "key": key})
+            continue
+
+        if entry["type"] == "mcp":
+            mcp_servers = payload.get("mcpServers", {})
+            if mcp_servers.get(key) != snapshot.get(key):
+                blocked_objects.append(entry["object_id"])
+                continue
+            actions.append({"object_id": entry["object_id"], "kind": "mcp", "target_file": entry["target_file"], "key": key})
+
+    return {"actions": actions, "blocked_objects": blocked_objects}

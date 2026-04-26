@@ -98,3 +98,5 @@ def test_uninstall_blocks_modified_skill_file(tmp_path) -> None:
     assert uninstall_response.status_code == 200
     assert uninstall_response.json()["success"] is False
     assert uninstall_response.json()["data"]["blocked_objects"]
+    assert skill_file.exists()
+    assert (project_root / ".claude" / "scripts" / "helper.py").exists()
