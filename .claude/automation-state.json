@@ -1,0 +1,4 @@
+{
+  "active": false,
+  "task": "请运行指令: zellij action dump-screen -p terminal_0 查看另外一个agent运行的情况"
+}
